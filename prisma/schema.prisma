@@ -1,0 +1,29 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Coupon {
+  id          String      @id @default(uuid())
+  createdAt   DateTime    @default(now())
+  status      String      @default("pending") // pending, won, lost
+  selections  Selection[]
+}
+
+model Selection {
+  id         Int      @id @default(autoincrement())
+  couponId   String
+  matchId    String
+  home       String
+  away       String
+  leagueSlug String   // DODAJEMY TO POLE (np. "premier-league:dYlOSQOD")
+  market     String
+  pick       String
+  coupon     Coupon   @relation(fields: [couponId], references: [id])
+}
