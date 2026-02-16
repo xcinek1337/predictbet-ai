@@ -5,6 +5,12 @@ import { updateCouponsAction } from "./actions";
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
 
+interface Coupon {
+  id: string;
+  status: string;
+  selections: any[];
+  createdAt: Date;
+}
 export default async function BetsPage() {
   // Pobieramy wszystkie kupony (również te rozliczone), aby mieć pełną historię
   const coupons = await prisma.coupon.findMany({
@@ -49,7 +55,7 @@ export default async function BetsPage() {
             </div>
           )}
 
-          {coupons.map((coupon) => (
+          {coupons.map((coupon: Coupon) => (
             <div
               key={coupon.id}
               className="bg-[#242424] rounded-2xl overflow-hidden border border-gray-800 shadow-2xl relative group"
