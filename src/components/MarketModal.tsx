@@ -64,6 +64,15 @@ export default function MarketModal({ match, onClose, onBet, currentBets }: Mark
               { label: '2', value: '2' }
             ]} 
           />
+          <MarketRow 
+            title="Podwójna szansa" 
+            marketKey="double_chance" 
+            options={[
+              { label: '1X', value: '1X' },
+              { label: '12', value: '12' },
+              { label: 'X2', value: 'X2' }
+            ]} 
+          />
 
           {/* BTTS */}
           <MarketRow 

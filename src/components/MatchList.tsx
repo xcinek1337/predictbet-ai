@@ -17,6 +17,7 @@ export default function MatchList({ matches }: { matches: any[] }) {
   const [activeMatch, setActiveMatch] = useState<any>(null);
 
   const toggleBet = (match: any, market: string, pick: string) => {
+    console.log(pick);
     // DIAGNOSTYKA: Sprawdźmy co wchodzi
     if (!match.leagueSlug) {
       console.error("CRITICAL: Brak leagueSlug w obiekcie meczu!", match);
@@ -102,7 +103,9 @@ export default function MatchList({ matches }: { matches: any[] }) {
             match={m}
             currentPick={betslip.find((b) => b.matchId === m.id)?.pick}
             // Ważne: onBet dla MatchRow (przyciski 1X2)
-            onBet={(match: any, type: string) => toggleBet(match, "1X2", type)}
+            onBet={(match: any, market: string, type: string) =>
+              toggleBet(match, market, type)
+            }
             onMore={(match: any) => setActiveMatch(match)}
           />
         ))}

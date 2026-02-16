@@ -140,6 +140,19 @@ export async function updateCouponsAction() {
           if (isOver) selectionWon = total > line;
           else selectionWon = total < line;
         }
+        else if (sel.market === "double_chance") {
+          // Podwójna szansa: 1X, 12, X2
+          if (sel.pick === "1X") {
+            // Wygra gospodarz LUB remis
+            selectionWon = homeScore >= awayScore;
+          } else if (sel.pick === "X2") {
+            // Wygra gość LUB remis
+            selectionWon = awayScore >= homeScore;
+          } else if (sel.pick === "12") {
+            // Wygra gospodarz LUB gość (brak remisu)
+            selectionWon = homeScore !== awayScore;
+          }
+        }
 
         if (!selectionWon) {
           console.log(`❌ PRZEGRANY ZAKŁAD: ${sel.matchId}`);

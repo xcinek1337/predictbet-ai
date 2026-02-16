@@ -4,6 +4,23 @@ import { NextResponse } from "next/server";
 // W Prisma 7 musisz jawnie podać URL do konstruktora, jeśli config nie zaskoczył
 const prisma = new PrismaClient();
 
+export async function GET() {
+  try {
+    const coupons = await prisma.coupon.findMany({
+      orderBy: { createdAt: 'desc' }, // Najnowsze na górze
+      include: { selections: true }   // Pobierz też zdarzenia
+    });
+    
+    return NextResponse.json(coupons);
+  } catch (error: any) {
+    console.error("GET BETS ERROR:", error);
+    return NextResponse.json(
+      { error: "Błąd pobierania historii" }, 
+      { status: 500 }
+    );
+  }
+}
+
 export async function POST(req: Request) {
   try {
     const data = await req.json();
