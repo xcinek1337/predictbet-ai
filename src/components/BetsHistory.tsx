@@ -1,8 +1,7 @@
 "use client";
 import { updateCouponsAction } from "@/app/bets/actions";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
-// Prosty typ dla kuponu (rozszerz go o pola z Prisma jeśli trzeba)
 interface Coupon {
   id: string;
   status: string;
@@ -10,29 +9,32 @@ interface Coupon {
   totalOdds?: number;
   potentialWin?: number;
 }
+
 interface BetsHistoryProps {
   initialCoupons: Coupon[];
 }
 
 export default function BetsHistory({ initialCoupons = [] }: BetsHistoryProps) {
-  // Stan kuponów inicjalizujemy propsami
   const [coupons, setCoupons] = useState<Coupon[]>(initialCoupons);
   const [filter, setFilter] = useState<"all" | "1" | "won" | "lost">("all");
   const [updating, setUpdating] = useState(false);
 
+  // 🔒 LOGIKA BLOKADY: Sprawdzamy, czy istnieje jakikolwiek kupon "W grze" (status === "1")
+  // Jeśli nie, nie ma sensu strzelać do API.
+  const hasPendingCoupons = coupons.some((c) => c.status === "1");
+
   const handleUpdate = async () => {
+    // Dodatkowe zabezpieczenie funkcji
+    if (!hasPendingCoupons) return;
+
     setUpdating(true);
     try {
-      // 1. Wywołaj Server Action (sprawdzenie wyników w API Flashscore)
       await updateCouponsAction();
 
-      // 2. Pobierz świeże dane z bazy (musisz mieć endpoint GET /api/bets)
-      //    Nawet jeśli initialCoupons przyszły z serwera, po aktualizacji musisz
-      //    pobrać nowe statusy (won/lost) asynchronicznie.
       const res = await fetch("/api/bets");
       const freshData = await res.json();
 
-      setCoupons(freshData); // Aktualizuj stan, widok się przerysuje
+      setCoupons(freshData);
     } catch (err) {
       console.error("Błąd aktualizacji:", err);
     } finally {
@@ -44,7 +46,6 @@ export default function BetsHistory({ initialCoupons = [] }: BetsHistoryProps) {
     filter === "all" ? true : c.status === filter,
   );
 
-  // Wspólne style dla przycisków filtrów
   const getBtnClass = (active: boolean) =>
     `px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all border ${
       active
@@ -57,19 +58,36 @@ export default function BetsHistory({ initialCoupons = [] }: BetsHistoryProps) {
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-bold text-white">Historia Kuponów</h2>
 
-        <button
-          onClick={handleUpdate}
-          disabled={updating}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-        >
-          {updating ? (
-            <>
-              <span className="animate-spin">↻</span> Sprawdzam...
-            </>
-          ) : (
-            <>↻ Odśwież Wyniki</>
+        <div className="flex flex-col items-end">
+          <button
+            onClick={handleUpdate}
+            // 🔒 BLOKADA PRZYCISKU
+            disabled={updating || !hasPendingCoupons}
+            className={`
+              px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2
+              ${
+                updating || !hasPendingCoupons
+                  ? "bg-gray-700 text-gray-500 cursor-not-allowed border border-gray-600"
+                  : "bg-blue-600 hover:bg-blue-700 text-white border border-blue-500 shadow-lg shadow-blue-600/20"
+              }
+            `}
+          >
+            {updating ? (
+              <>
+                <span className="animate-spin">↻</span> Sprawdzam...
+              </>
+            ) : (
+              <>↻ Odśwież Wyniki</>
+            )}
+          </button>
+
+          {/* Informacja dla użytkownika dlaczego przycisk nie działa */}
+          {!hasPendingCoupons && coupons.length > 0 && (
+            <span className="text-[10px] text-gray-500 mt-1">
+              Brak aktywnych kuponów do sprawdzenia
+            </span>
           )}
-        </button>
+        </div>
       </div>
 
       {/* Filtry */}
@@ -116,9 +134,7 @@ export default function BetsHistory({ initialCoupons = [] }: BetsHistoryProps) {
   );
 }
 
-// Sub-komponent karty kuponu (możesz go wydzielić do osobnego pliku)
 function CouponCard({ coupon }: { coupon: Coupon }) {
-  // Helper do kolorów statusu
   const statusColor =
     {
       "1": "text-blue-400 border-blue-500/30 bg-blue-500/10",
@@ -135,9 +151,10 @@ function CouponCard({ coupon }: { coupon: Coupon }) {
 
   return (
     <div
-      className={`bg-[#242424] rounded-xl p-4 border ${coupon.status === "won" ? "border-green-500/50" : "border-gray-800"} relative overflow-hidden group hover:border-gray-700 transition-colors`}
+      className={`bg-[#242424] rounded-xl p-4 border ${
+        coupon.status === "won" ? "border-green-500/50" : "border-gray-800"
+      } relative overflow-hidden group hover:border-gray-700 transition-colors`}
     >
-      {/* Header kuponu */}
       <div className="flex justify-between items-start mb-4 border-b border-gray-800 pb-3">
         <div>
           <span
@@ -149,16 +166,20 @@ function CouponCard({ coupon }: { coupon: Coupon }) {
             ID: {coupon.id.slice(0, 8)}...
           </div>
         </div>
-        {/* Tu możesz dodać np. datę czy potencjalną wygraną */}
       </div>
 
-      {/* Lista zdarzeń na kuponie */}
       <div className="space-y-2">
         {coupon.selections.map((sel: any, idx: number) => (
           <div key={idx} className="flex justify-between items-center text-sm">
             <div className="flex items-center gap-2">
               <div
-                className={`w-2 h-2 rounded-full ${sel.status === "won" ? "bg-green-500" : sel.status === "lost" ? "bg-red-500" : "bg-gray-600"}`}
+                className={`w-2 h-2 rounded-full ${
+                  sel.status === "won"
+                    ? "bg-green-500"
+                    : sel.status === "lost"
+                      ? "bg-red-500"
+                      : "bg-gray-600"
+                }`}
               ></div>
               <span className="text-gray-300 font-medium">
                 {sel.home} vs {sel.away}
